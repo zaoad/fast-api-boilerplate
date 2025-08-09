@@ -6,6 +6,7 @@ from app.core.logging import get_logger
 import time
 import uuid
 from app.core.redis import get_redis, close_redis
+from app.core.mongo import get_mongo_client, close_mongo
 
 # Set up logging
 logger = get_logger("app.main")
@@ -57,10 +58,17 @@ async def on_startup():
         logger.info("Connected to Redis")
     except Exception as e:
         logger.exception(f"Redis connection failed: {e}")
+    try:
+        mongo_client = await get_mongo_client()
+        await mongo_client.admin.command('ping')
+        logger.info("Connected to MongoDB")
+    except Exception as e:
+        logger.exception(f"MongoDB connection failed: {e}")
 
 @app.on_event("shutdown")
 async def on_shutdown():
     await close_redis()
+    await close_mongo()
 
 # Include routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}")
@@ -81,3 +89,9 @@ async def redis_ping():
     redis = await get_redis()
     pong = await redis.ping()
     return {"redis": "pong" if pong else "no-reply"} 
+
+@app.get("/mongo/ping")
+async def mongo_ping():
+    client = await get_mongo_client()
+    await client.admin.command('ping')
+    return {"mongo": "pong"} 
