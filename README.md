@@ -12,6 +12,7 @@ A FastAPI boilerplate with PostgreSQL, Alembic, JWT authentication, and MVC arch
 - Environment configuration with .env
 - Docker and Docker Compose support
 - Database management UI with Adminer
+- MongoDB for document storage
 
 ## Setup
 
@@ -25,18 +26,28 @@ cd backend
 
 2. Create a `.env` file in the root directory with the following variables:
 ```bash
-# Database Configuration
+# Postgres
 POSTGRES_SERVER=db
 POSTGRES_USER=fastapi_user
 POSTGRES_PASSWORD=fastapi_password
 POSTGRES_DB=fastapi_db
 
-# JWT Configuration
+# Redis (optional overrides)
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+
+# MongoDB (optional overrides)
+MONGO_HOST=mongo
+MONGO_PORT=27017
+MONGO_DB=fastapi_mongo
+
+# JWT
 SECRET_KEY=your-super-secret-key-change-in-production-make-it-long-and-random
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# Application Configuration
+# App
 PROJECT_NAME=FastAPI Boilerplate
 VERSION=1.0.0
 API_V1_STR=/api/v1
@@ -50,6 +61,9 @@ docker-compose up --build
 The application will be available at:
 - FastAPI app: http://localhost:8000
 - API documentation: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- Redis ping: http://localhost:8000/redis/ping
+- Mongo ping: http://localhost:8000/mongo/ping
 - Database admin (Adminer): http://localhost:8080
 
 ### Option 2: Local Development
@@ -160,12 +174,14 @@ docker-compose down -v
 # Build production image
 docker build -t fastapi-app .
 
-# Run production container
+# Run production container (with external services)
 docker run -p 8000:8000 \
   -e POSTGRES_SERVER=your-db-host \
   -e POSTGRES_USER=your-db-user \
   -e POSTGRES_PASSWORD=your-db-password \
   -e POSTGRES_DB=your-db-name \
+  -e REDIS_HOST=your-redis-host -e REDIS_PORT=6379 -e REDIS_DB=0 \
+  -e MONGO_HOST=your-mongo-host -e MONGO_PORT=27017 -e MONGO_DB=fastapi_mongo \
   -e SECRET_KEY=your-production-secret \
   fastapi-app
 ```
