@@ -2,8 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.db.base import get_db
-from app.models.user import User, UserCreate, UserUpdate
-from app.schemas.user import User as UserDB
+from app.schemas.user import User, UserCreate, UserUpdate
 from app.services.user import (
     get_user,
     get_users,

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1.endpoints import users, auth
+from app.api.v1.endpoints import users, auth, linkedin
 from app.core.logging import get_logger
 import time
 import uuid
@@ -65,6 +65,7 @@ async def on_shutdown():
 # Include routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(linkedin.router, prefix=f"{settings.API_V1_STR}", tags=["linkedin"])
 
 @app.get("/")
 def read_root():

@@ -5,10 +5,9 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token, verify_password, get_current_user
 from app.core.config import settings
 from app.db.base import get_db
-from app.models.auth import Token, Login, SignupResponse
-from app.models.user import UserCreate, User
+from app.schemas.auth import Token, Login, SignupResponse
+from app.schemas.user import UserCreate, User
 from app.services.user import get_user_by_email, create_user
-from app.schemas.user import User as UserDB
 from app.core.logging import get_logger
 
 logger = get_logger("app.api.auth")

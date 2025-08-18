@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.db.base import Base
 from app.core.config import settings
 # Import models so that Base.metadata is populated for autogenerate
-from app.schemas.user import User  # noqa: F401
+from app.models.user import User  # noqa: F401
+from app.models.linkedin import LinkedInToken  # noqa: F401
 
 config = context.config
 

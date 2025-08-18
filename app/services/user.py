@@ -1,8 +1,8 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.schemas.user import User
-from app.models.user import UserCreate, UserUpdate
-from app.core.security import get_password_hash, verify_password
+from app.models.user import User
+from app.schemas.user import UserCreate, UserUpdate
+from app.core.security import get_password_hash
 
 def get_user(db: Session, user_id: int) -> Optional[User]:
     """Get a user by ID."""

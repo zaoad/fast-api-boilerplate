@@ -1,5 +1,9 @@
-#!/bin/sh
-set -e
+#!/bin/bash
+set -euo pipefail
+
+echo "Starting docker-entrypoint.sh"
+echo "Current directory: $(pwd)"
+echo "Script location: $0"
 
 cd /app
 

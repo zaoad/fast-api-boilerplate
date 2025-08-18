@@ -11,10 +11,23 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     DATABASE_URL: Optional[str] = None
-    
+
+    REDIS_URL: Optional[str] = None
+    REDIS_HOST: str
+    REDIS_PORT: str
+    REDIS_DB: str
+
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    LINKEDIN_ACCESS_TOKEN_URL: Optional[str] = None
+    LINKEDIN_CLIENT_ID: Optional[str] = None
+    LINKEDIN_CLIENT_SECRET: Optional[str] = None
+    LINKEDIN_REDIRECT_URI: Optional[str] = None
+    LINKEDIN_USER_INFO_URL: Optional[str] = None
+    LINKEDIN_AUTH_URL: Optional[str] = None
+    LINKEDIN_SCOPE: Optional[str] = None
     
     class Config:
         env_file = ".env"
