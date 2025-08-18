@@ -62,7 +62,7 @@ def get_linkedin_me(db: Session, user_id: int):
     """
     Get LinkedIn me endpoint.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).first()
+    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).last()
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
 
