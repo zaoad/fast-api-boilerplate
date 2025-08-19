@@ -21,7 +21,7 @@ export PYTHONPATH=/app:${PYTHONPATH}
 # Create tables directly (bootstrap)
 python - <<'PY'
 from app.db.base import Base, engine
-from app.schemas.user import User  # noqa: F401
+from app.models.user import User  # noqa: F401
 print('Creating tables with SQLAlchemy Base.metadata.create_all...')
 Base.metadata.create_all(bind=engine)
 print('Tables created.')
