@@ -12,7 +12,7 @@ from app.services.user import (
     get_user_by_email,
 )
 from app.core.logging import get_logger
-from app.core.security import get_current_user, get_current_active_user, get_current_superuser
+from app.core.security import get_current_active_user, get_current_superuser
 
 logger = get_logger("app.api.users")
 

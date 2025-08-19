@@ -4,7 +4,7 @@ from app.core.logging import get_logger
 from app.services.linkedin import get_linkedin_token, get_linkedin_me, get_linkedin_auth_url
 from app.db.base import get_db
 from app.core.security import get_current_active_user
-from app.models.user import User
+from app.schemas.user import User
 
 logger = get_logger("app.api.auth")
 

@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.base import get_db
 from app.core.logging import get_logger
-from app.models.user import User  # Import the Pydantic User model
-from app.schemas.user import User as UserDB  # Import the SQLAlchemy User model
+from app.schemas.user import User  # Import the Pydantic User model
 
 logger = get_logger("app.core.security")
 
