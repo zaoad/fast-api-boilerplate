@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     LINKEDIN_REDIRECT_URI: Optional[str] = None
     LINKEDIN_USER_INFO_URL: Optional[str] = None
     LINKEDIN_AUTH_URL: Optional[str] = None
+    LINKEDIN_REST_URL: Optional[str] = None
     LINKEDIN_SCOPE: Optional[str] = None
     
     class Config:
