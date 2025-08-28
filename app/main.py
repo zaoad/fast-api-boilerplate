@@ -6,6 +6,7 @@ from app.core.logging import get_logger
 import time
 import uuid
 from app.core.redis import get_redis, close_redis
+from app.db.base import init_mongodb
 
 # Set up logging
 logger = get_logger("app.main")
@@ -48,9 +49,18 @@ async def log_requests(request: Request, call_next):
         logger.exception(f"Request failed: {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.4f}s")
         raise
 
-# Startup/Shutdown events for Redis
+# Startup/Shutdown events
 @app.on_event("startup")
 async def on_startup():
+    # Initialize MongoDB
+    try:
+        await init_mongodb()
+        logger.info("Connected to MongoDB")
+    except Exception as e:
+        logger.exception(f"MongoDB connection failed: {e}")
+        raise  # We raise here because the app can't work without MongoDB
+
+    # Initialize Redis
     try:
         redis = await get_redis()
         await redis.ping()

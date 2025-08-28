@@ -1,7 +1,6 @@
 import jwt
 import requests
 import urllib.parse
-from sqlalchemy.orm import Session
 from app.core.config import settings
 from fastapi import HTTPException
 from app.models.linkedin import LinkedInToken, LinkedInPost
@@ -10,7 +9,13 @@ from app.schemas.linkedin import LinkedInPostCreate, LinkedInPostUpdate
 
 logger = get_logger("app.services.linkedin")
 
-def get_linkedin_token(code: str, db: Session, user_id: int):
+async def get_linkedin_token_from_db(user_id: str):
+    """
+    Get a LinkedIn token from the database.
+    """
+    return await LinkedInToken.find_one({"user_id": user_id})
+
+async def get_linkedin_token(code: str, user_id: str):
     """
     Get a LinkedIn token using the code.
     """
@@ -18,12 +23,6 @@ def get_linkedin_token(code: str, db: Session, user_id: int):
     client_id = settings.LINKEDIN_CLIENT_ID
     client_secret = settings.LINKEDIN_CLIENT_SECRET
     redirect_uri = settings.LINKEDIN_REDIRECT_URI
-
-    logger.info(f"Getting LinkedIn token with code: {code}")
-    logger.info(f"URL: {url}")
-    logger.info(f"Client ID: {client_id}")
-    logger.info(f"Client Secret: {client_secret}")
-    logger.info(f"Redirect URI: {redirect_uri}")
 
     response = requests.post(
         url=url,
@@ -52,29 +51,27 @@ def get_linkedin_token(code: str, db: Session, user_id: int):
         token_type=token_info["token_type"],
         id_token=token_info["id_token"],
     )
-    db.add(db_token)
-    db.commit()
-    db.refresh(db_token)
+    await db_token.insert()
 
     return {
         "message": "LinkedIn Token Saved Successfully"
     }
 
-def get_linkedin_me(db: Session, user_id: int):
+async def get_linkedin_me(user_id: str):
     """
     Get LinkedIn me endpoint.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).order_by(LinkedInToken.id.desc()).first()
+    db_token = await get_linkedin_token_from_db(user_id)
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
 
     url = settings.LINKEDIN_REST_URL
     headers = {
-        "Authorization": f"Bearer {db_token.access_token}",
+        "Authorization": f"Bearer {db_token.access_token}"
     }
 
     response = requests.get(
-        url=f"{url}/me",
+        url=f"https://api.linkedin.com/v2/userinfo",
         headers=headers,
     )
 
@@ -86,7 +83,7 @@ def get_linkedin_me(db: Session, user_id: int):
         "data": response.json(),
     }
 
-def get_linkedin_auth_url():
+async def get_linkedin_auth_url():
     """
     Get LinkedIn authentication URL.
     """
@@ -95,11 +92,11 @@ def get_linkedin_auth_url():
         "url": f"{settings.LINKEDIN_AUTH_URL}?response_type=code&client_id={settings.LINKEDIN_CLIENT_ID}&redirect_uri={settings.LINKEDIN_REDIRECT_URI}&scope={urllib.parse.quote(settings.LINKEDIN_SCOPE)}",
     }
 
-def create_linkedin_post(post: LinkedInPostCreate, db: Session, user_id: int):
+async def create_linkedin_post(post: LinkedInPostCreate, user_id: str):
     """
     Create a new LinkedIn post.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).order_by(LinkedInToken.id.desc()).first()
+    db_token = await get_linkedin_token_from_db(user_id)
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
 
@@ -149,9 +146,7 @@ def create_linkedin_post(post: LinkedInPostCreate, db: Session, user_id: int):
         user_id=user_id,
         post_id=post_share_urn.split(":")[-1],
     )
-    db.add(db_post)
-    db.commit()
-    db.refresh(db_post)
+    await db_post.insert()
 
     return {
         "message": "LinkedIn Post Created Successfully",
@@ -165,11 +160,11 @@ def get_user_sub_from_id_token(id_token: str):
     decoded_token = jwt.decode(id_token, options={"verify_signature": False})
     return decoded_token.get("sub")
 
-def upload_image_to_linkedin(user_id: int, image: bytes, db: Session):
+async def upload_image_to_linkedin(user_id: str, image: bytes):
     """
     Upload image to LinkedIn.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).order_by(LinkedInToken.id.desc()).first()
+    db_token = await get_linkedin_token_from_db(user_id)
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
     
@@ -228,19 +223,15 @@ def linkedin_image_upload_initiate(sub: str, linkedin_token: str):
     
     return response.json()["value"]
 
-def update_linkedin_post(post_id: str, post_update: LinkedInPostUpdate, db: Session, user_id: int):
+async def update_linkedin_post(post_id: str, post_update: LinkedInPostUpdate, user_id: str):
     """
     Update a LinkedIn post.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).order_by(LinkedInToken.id.desc()).first()
+    db_token = await get_linkedin_token_from_db(user_id)
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
     
-    post = db.query(LinkedInPost).filter(
-            LinkedInPost.user_id == user_id,
-            LinkedInPost.post_id == post_id,
-            LinkedInPost.is_deleted == False
-        ).first()
+    post = await LinkedInPost.find_one({"user_id": user_id, "post_id": post_id, "is_deleted": False})
     if not post:
         raise HTTPException(status_code=404, detail="LinkedIn post does not exist for this user")
 
@@ -269,19 +260,15 @@ def update_linkedin_post(post_id: str, post_update: LinkedInPostUpdate, db: Sess
         "message": "LinkedIn Post Updated Successfully",
     }
 
-def delete_linkedin_post(post_id: str, db: Session, user_id: int):
+async def delete_linkedin_post(post_id: str, user_id: str):
     """
     Delete a LinkedIn post.
     """
-    db_token = db.query(LinkedInToken).filter(LinkedInToken.user_id == user_id).order_by(LinkedInToken.id.desc()).first()
+    db_token = await get_linkedin_token_from_db(user_id)
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
     
-    post = db.query(LinkedInPost).filter(
-        LinkedInPost.user_id == user_id,
-        LinkedInPost.post_id == post_id,
-        LinkedInPost.is_deleted == False
-    ).first()
+    post = await LinkedInPost.find_one({"user_id": user_id, "post_id": post_id, "is_deleted": False})
     if not post:
         raise HTTPException(status_code=404, detail="LinkedIn post does not exist for this user")
 
@@ -301,8 +288,7 @@ def delete_linkedin_post(post_id: str, db: Session, user_id: int):
         raise HTTPException(status_code=400, detail="Failed to delete LinkedIn post")
 
     post.is_deleted = True
-    db.commit()
-    db.refresh(post)
+    await post.save()
     
     return {
         "message": "LinkedIn Post Deleted Successfully",

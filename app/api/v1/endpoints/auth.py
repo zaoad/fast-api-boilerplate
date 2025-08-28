@@ -1,10 +1,9 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from app.core.security import create_access_token, verify_password, get_current_user
+from app.core.security import create_access_token, verify_password
+from app.core.auth import get_current_user
 from app.core.config import settings
-from app.db.base import get_db
 from app.schemas.auth import Token, Login, SignupResponse
 from app.schemas.user import UserCreate, User
 from app.services.user import get_user_by_email, create_user
@@ -20,14 +19,13 @@ router = APIRouter(
 @router.post("/login", response_model=Token)
 async def login(
     login_data: Login,
-    db: Session = Depends(get_db)
 ):
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
     logger.info(f"Login attempt for user with email: {login_data.email}")
     
-    user = get_user_by_email(db, email=login_data.email)
+    user = await get_user_by_email(login_data.email)
     if not user:
         logger.warning(f"Login failed: User with email {login_data.email} not found")
         raise HTTPException(
@@ -56,7 +54,6 @@ async def login(
 @router.post("/login/oauth", response_model=Token)
 async def login_oauth(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
 ):
     """
     OAuth2 compatible token login using form, get an access token for future requests.
@@ -64,7 +61,7 @@ async def login_oauth(
     """
     logger.info(f"OAuth login attempt for user with username: {form_data.username}")
     
-    user = get_user_by_email(db, email=form_data.username)
+    user = get_user_by_email(email=form_data.username)
     if not user:
         logger.warning(f"OAuth login failed: User with email {form_data.username} not found")
         raise HTTPException(
@@ -93,7 +90,6 @@ async def login_oauth(
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     user_data: UserCreate,
-    db: Session = Depends(get_db)
 ):
     """
     Create a new user account.
@@ -101,7 +97,8 @@ async def signup(
     logger.info(f"Signup attempt for user with email: {user_data.email}")
     
     # Check if user already exists
-    user = get_user_by_email(db, email=user_data.email)
+    user = await get_user_by_email(email=user_data.email)
+
     if user:
         logger.warning(f"Signup failed: User with email {user_data.email} already exists")
         raise HTTPException(
@@ -110,10 +107,10 @@ async def signup(
         )
     
     # Create new user
-    user = create_user(db=db, user=user_data)
+    user = await create_user(user=user_data)
     
-    logger.info(f"User {user_data.email} successfully registered with ID: {user.id}")
-    return {"message": "User created successfully", "user_id": user.id}
+    logger.info(f"User {user_data.email} successfully registered with ID: {str(user.id)}")
+    return {"message": "User created successfully", "user_id": str(user.id)}
 
 @router.get("/me", response_model=User)
 async def read_current_user(

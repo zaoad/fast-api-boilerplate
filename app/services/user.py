@@ -1,22 +1,23 @@
 from typing import Optional, List
-from sqlalchemy.orm import Session
+from datetime import datetime
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash
 
-def get_user(db: Session, user_id: int) -> Optional[User]:
+async def get_user(id: str) -> Optional[User]:
     """Get a user by ID."""
-    return db.query(User).filter(User.id == user_id).first()
+    return await User.get(id)
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
+async def get_user_by_email(email: str) -> Optional[User]:
     """Get a user by email."""
-    return db.query(User).filter(User.email == email).first()
+    return await User.find_one({"email": email})
 
-def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
+async def get_users(skip: int = 0, limit: int = 100) -> List[User]:
     """Get a list of users with pagination."""
-    return db.query(User).offset(skip).limit(limit).all()
+    users = await User.find_all().skip(skip).limit(limit).to_list()
+    return users
 
-def create_user(db: Session, user: UserCreate) -> User:
+async def create_user(user: UserCreate) -> User:
     """Create a new user."""
     hashed_password = get_password_hash(user.password)
     db_user = User(
@@ -24,15 +25,14 @@ def create_user(db: Session, user: UserCreate) -> User:
         hashed_password=hashed_password,
         is_active=user.is_active,
         is_superuser=user.is_superuser,
+        created_at=datetime.utcnow()
     )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db_user.insert()
     return db_user
 
-def update_user(db: Session, user_id: int, user: UserUpdate) -> Optional[User]:
+async def update_user(id: str, user: UserUpdate) -> Optional[User]:
     """Update a user's information."""
-    db_user = get_user(db, user_id)
+    db_user = await get_user(id)
     if not db_user:
         return None
     
@@ -42,18 +42,15 @@ def update_user(db: Session, user_id: int, user: UserUpdate) -> Optional[User]:
     if "password" in update_data:
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
     
-    for field, value in update_data.items():
-        setattr(db_user, field, value)
+    update_data["updated_at"] = datetime.utcnow()
     
-    db.commit()
-    db.refresh(db_user)
+    await db_user.set(update_data)
     return db_user
 
-def delete_user(db: Session, user_id: int) -> bool:
+async def delete_user(id: str) -> bool:
     """Delete a user."""
-    db_user = get_user(db, user_id)
+    db_user = await get_user(id)
     if not db_user:
         return False
-    db.delete(db_user)
-    db.commit()
+    await db_user.delete()
     return True 

@@ -1,24 +1,25 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15-alpine
-    container_name: fastapi_postgres
+  mongodb:
+    image: mongo:6-jammy
+    container_name: fastapi_mongodb
     restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGODB_DB}
     ports:
-      - "5432:5432"
+      - "${MONGODB_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongodb-entrypoint.sh:/docker-entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/docker-entrypoint.sh"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fastapi_user} -d ${POSTGRES_DB:-fastapi_db}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 30s
 
-  # FastAPI Application
   web:
     build: .
     container_name: fastapi_web_app
@@ -28,7 +29,7 @@ services:
     env_file:
       - .env
     depends_on:
-      db:
+      mongodb:
         condition: service_healthy
       redis:
         condition: service_started
@@ -36,27 +37,16 @@ services:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Optional: Adminer for database management
-  adminer:
-    image: adminer:latest
-    container_name: fastapi_adminer
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-
-  # Redis
   redis:
     image: redis:7-alpine
     container_name: fastapi_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+    command: redis-server --appendonly yes
 
 volumes:
-  postgres_data:
+  mongodb_data:
 
 networks:
   default:

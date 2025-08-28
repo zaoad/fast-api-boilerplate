@@ -6,11 +6,12 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    DATABASE_URL: Optional[str] = None
+    MONGODB_URL: Optional[str] = None
+    MONGODB_HOST: str = "localhost"
+    MONGODB_PORT: int = 27017
+    MONGODB_USER: Optional[str] = None
+    MONGODB_PASSWORD: Optional[str] = None
+    MONGODB_DB: str = "fastapi_db"
 
     REDIS_URL: Optional[str] = None
     REDIS_HOST: str
@@ -34,9 +35,14 @@ class Settings(BaseSettings):
         case_sensitive = True
 
     def get_database_url(self) -> str:
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+        if self.MONGODB_URL:
+            return self.MONGODB_URL
+        
+        auth_str = ""
+        if self.MONGODB_USER and self.MONGODB_PASSWORD:
+            auth_str = f"{self.MONGODB_USER}:{self.MONGODB_PASSWORD}@"
+            
+        return f"mongodb://{auth_str}{self.MONGODB_HOST}:{self.MONGODB_PORT}/{self.MONGODB_DB}?authSource=admin"
 
     def get_redis_url(self) -> str:
         if self.REDIS_URL:

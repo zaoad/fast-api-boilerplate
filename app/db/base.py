@@ -1,16 +1,18 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 from app.core.config import settings
+from typing import Optional
+from app.models.user import User
+from app.models.linkedin import LinkedInToken, LinkedInPost
 
-engine = create_engine(settings.get_database_url())
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+_mongo_client: Optional[AsyncIOMotorClient] = None
 
-Base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close() 
+async def init_mongodb():
+    """Initialize MongoDB connection and Beanie ODM."""
+    global _mongo_client
+    if _mongo_client is None:
+        _mongo_client = AsyncIOMotorClient(settings.get_database_url())
+        await init_beanie(
+            database=_mongo_client[settings.MONGODB_DB],
+            document_models=[User, LinkedInToken, LinkedInPost]  # Add all your document models here
+        )

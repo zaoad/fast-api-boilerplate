@@ -1,7 +1,5 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-from app.db.base import get_db
 from app.schemas.user import User, UserCreate, UserUpdate
 from app.services.user import (
     get_user,
@@ -12,7 +10,7 @@ from app.services.user import (
     get_user_by_email,
 )
 from app.core.logging import get_logger
-from app.core.security import get_current_active_user, get_current_superuser
+from app.core.auth import get_current_active_user, get_current_superuser
 
 logger = get_logger("app.api.users")
 
@@ -24,10 +22,8 @@ router = APIRouter(
 
 @router.get("/", response_model=List[User], summary="Get all users")
 async def read_users(
-    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_superuser)  # Only superusers can list all users
 ):
     """
@@ -40,26 +36,13 @@ async def read_users(
     """
     logger.info(f"Fetching users with skip={skip}, limit={limit}")
     
-    users_db = get_users(db, skip=skip, limit=limit)
-    
-    # Convert SQLAlchemy models to Pydantic models
-    users = []
-    for user_db in users_db:
-        users.append(User(
-            id=user_db.id,
-            email=user_db.email,
-            is_active=user_db.is_active,
-            is_superuser=user_db.is_superuser
-        ))
-    
+    users = await get_users(skip=skip, limit=limit)
     logger.info(f"Found {len(users)} users")
     return users
 
 @router.post("/", response_model=User, summary="Create new user", status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(
-    request: Request,
     user: UserCreate,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_superuser)  # Only superusers can create users directly
 ):
     """
@@ -74,27 +57,17 @@ async def create_user_endpoint(
     """
     logger.info(f"Creating new user with email={user.email}")
     
-    db_user = get_user_by_email(db, email=user.email)
-    if db_user:
+    existing_user = await get_user_by_email(email=user.email)
+    if existing_user:
         logger.warning(f"Email already registered: {user.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    user_db = create_user(db=db, user=user)
-    
-    # Convert to Pydantic model
-    result = User(
-        id=user_db.id,
-        email=user_db.email,
-        is_active=user_db.is_active,
-        is_superuser=user_db.is_superuser
-    )
-    
-    logger.info(f"User created successfully with id={result.id}")
-    return result
+    new_user = await create_user(user=user)
+    logger.info(f"User created successfully with id={new_user.id}")
+    return new_user
 
 @router.get("/me", response_model=User, summary="Get current user")
 async def read_user_me(
-    request: Request,
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -107,9 +80,7 @@ async def read_user_me(
 
 @router.get("/{user_id}", response_model=User, summary="Get user by ID")
 async def read_user(
-    request: Request,
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -122,35 +93,25 @@ async def read_user(
     logger.info(f"Fetching user by ID={user_id}")
     
     # Check if user is trying to access their own profile or is a superuser
-    if user_id != current_user.id and not current_user.is_superuser:
+    if user_id != str(current_user.id) and not current_user.is_superuser:
         logger.warning(f"Access denied: User {current_user.id} attempted to access profile of user {user_id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this profile"
         )
     
-    user_db = get_user(db, user_id=user_id)
-    if user_db is None:
+    user = await get_user(id=user_id)
+    if user is None:
         logger.warning(f"User not found: id={user_id}")
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Convert to Pydantic model
-    user = User(
-        id=user_db.id,
-        email=user_db.email,
-        is_active=user_db.is_active,
-        is_superuser=user_db.is_superuser
-    )
     
     logger.info(f"User found: id={user_id}")
     return user
 
 @router.put("/{user_id}", response_model=User, summary="Update user")
 async def update_user_endpoint(
-    request: Request,
-    user_id: int,
+    user_id: str,
     user: UserUpdate,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -168,7 +129,7 @@ async def update_user_endpoint(
     logger.info(f"Updating user with id={user_id}")
     
     # Check if user is trying to update their own profile or is a superuser
-    if user_id != current_user.id and not current_user.is_superuser:
+    if user_id != str(current_user.id) and not current_user.is_superuser:
         logger.warning(f"Access denied: User {current_user.id} attempted to update profile of user {user_id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -184,27 +145,17 @@ async def update_user_endpoint(
                 detail="Not enough permissions to modify these fields"
             )
     
-    user_db = update_user(db, user_id=user_id, user=user)
-    if user_db is None:
+    updated_user = await update_user(id=user_id, user=user)
+    if updated_user is None:
         logger.warning(f"User not found for update: id={user_id}")
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Convert to Pydantic model
-    updated_user = User(
-        id=user_db.id,
-        email=user_db.email,
-        is_active=user_db.is_active,
-        is_superuser=user_db.is_superuser
-    )
     
     logger.info(f"User updated successfully: id={user_id}")
     return updated_user
 
 @router.delete("/{user_id}", summary="Delete user")
 async def delete_user_endpoint(
-    request: Request,
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
     current_user: User = Depends(get_current_superuser)  # Only superusers can delete users
 ):
     """
@@ -216,7 +167,7 @@ async def delete_user_endpoint(
     """
     logger.info(f"Deleting user with id={user_id}")
     
-    success = delete_user(db, user_id=user_id)
+    success = await delete_user(id=user_id)
     if not success:
         logger.warning(f"User not found for deletion: id={user_id}")
         raise HTTPException(status_code=404, detail="User not found")

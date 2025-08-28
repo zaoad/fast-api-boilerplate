@@ -1,26 +1,28 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
-from app.db.base import Base
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import Optional
+from beanie import Document
 
-class LinkedInToken(Base):
-    __tablename__ = "linkedin_tokens"
+class LinkedInToken(Document):
+    user_id: str
+    access_token: str
+    expires_in: int
+    scope: str
+    token_type: str
+    id_token: str
+    created_at: datetime = datetime.utcnow()
+    updated_at: Optional[datetime] = None
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    access_token = Column(String)
-    expires_in = Column(Integer)
-    scope = Column(String)
-    token_type = Column(String)
-    id_token = Column(String)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc))
+    class Settings:
+        name = "linkedin_tokens"
+        use_state_management = True
 
-class LinkedInPost(Base):
-    __tablename__ = "linkedin_posts"
+class LinkedInPost(Document):
+    user_id: str
+    post_id: str
+    is_deleted: bool = False
+    created_at: datetime = datetime.utcnow()
+    updated_at: Optional[datetime] = None
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    post_id = Column(String)
-    is_deleted = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc))
+    class Settings:
+        name = "linkedin_posts"
+        use_state_management = True

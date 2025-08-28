@@ -19,4 +19,4 @@ class Login(BaseModel):
 class SignupResponse(BaseModel):
     """Response model for successful signup."""
     message: str
-    user_id: int 
+    user_id: str 

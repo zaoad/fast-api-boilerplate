@@ -20,7 +20,7 @@ class UserUpdate(BaseModel):
 
 class UserInDBBase(UserBase):
     """User model as stored in DB, with ID."""
-    id: int
+    id: str
 
     class Config:
         from_attributes = True
