@@ -1,22 +1,19 @@
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.base import get_db
 from app.core.logging import get_logger
-from app.schemas.user import User  # Import the Pydantic User model
+from app.schemas.user import User
 
 logger = get_logger("app.core.security")
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# OAuth2 scheme for token extraction from request
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
@@ -55,7 +52,9 @@ def decode_jwt(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), 
+    credential: Union[HTTPAuthorizationCredentials, None] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
     db: Session = Depends(get_db)
 ) -> User:
     """Get the current user from the database based on the JWT token."""
@@ -64,16 +63,20 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
+    if credential is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer authentication required. Please pass bearer token in the authorization header.",
+            headers={"WWW-Authenticate": 'Bearer realm="auth_required"'},
+        )
     try:
         payload = jwt.decode(
-            token, 
+            credential.credentials, 
             settings.SECRET_KEY, 
             algorithms=[settings.ALGORITHM]
         )
         user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
     except JWTError:
         raise credentials_exception
     

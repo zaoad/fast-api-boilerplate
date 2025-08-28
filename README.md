@@ -1,12 +1,14 @@
-# FastAPI Boilerplate
+# LinkedInAPI Project
 
-A FastAPI boilerplate with PostgreSQL, Alembic, JWT authentication, and MVC architecture.
+A FastAPI-based LinkedIn API integration project with PostgreSQL, Redis, JWT authentication, and comprehensive LinkedIn posting capabilities.
 
 ## Features
 
 - FastAPI with PostgreSQL database
-- Alembic for database migrations
+- Redis for caching and session management
+- LinkedIn API integration for posting and authentication
 - JWT authentication
+- Alembic for database migrations
 - MVC architecture
 - Testing setup with pytest
 - Environment configuration with .env
@@ -20,7 +22,7 @@ A FastAPI boilerplate with PostgreSQL, Alembic, JWT authentication, and MVC arch
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd backend
+cd fast-api-boilerplate
 ```
 
 2. Create a `.env` file in the root directory with the following variables:
@@ -31,13 +33,27 @@ POSTGRES_USER=fastapi_user
 POSTGRES_PASSWORD=fastapi_password
 POSTGRES_DB=fastapi_db
 
+# Redis Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+
 # JWT Configuration
-SECRET_KEY=your-super-secret-key-change-in-production-make-it-long-and-random
+SECRET_KEY=your-super-secret-key-change-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
+# LinkedIn Configuration
+LINKEDIN_CLIENT_ID=your_linkedin_client_id
+LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
+LINKEDIN_REDIRECT_URI=http://localhost:8000/api/v1/linkedin/callback
+LINKEDIN_ACCESS_TOKEN_URL=https://www.linkedin.com/oauth/v2/accessToken
+LINKEDIN_AUTH_URL=https://www.linkedin.com/oauth/v2/authorization
+LINKEDIN_REST_URL=https://api.linkedin.com/v2
+LINKEDIN_SCOPE=openid profile email w_member_social
+
 # Application Configuration
-PROJECT_NAME=FastAPI Boilerplate
+PROJECT_NAME=LinkedInAPI Project
 VERSION=1.0.0
 API_V1_STR=/api/v1
 ```
@@ -65,18 +81,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Set up PostgreSQL database locally and create a `.env` file:
+3. Set up PostgreSQL and Redis locally and create a `.env` file with the configuration shown above, but update these values:
 ```bash
-# Database Configuration
 POSTGRES_SERVER=localhost
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_db_password
-POSTGRES_DB=fastapi_db
-
-# JWT Configuration
-SECRET_KEY=your-super-secret-key-change-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+REDIS_HOST=localhost
 ```
 
 4. Initialize the database:
@@ -93,13 +101,15 @@ uvicorn app.main:app --reload
 
 ```
 app/
-├── api/           # API routes
-├── core/          # Core functionality (config, security)
-├── db/            # Database models and session
-├── models/        # Pydantic models
-├── schemas/       # SQLAlchemy models
-├── services/      # Business logic
-└── tests/         # Test files
+├── api/                # API routes
+│   └── v1/
+│       └── endpoints/  # API endpoint modules
+├── core/              # Core functionality (config, security, logging, redis)
+├── db/                # Database configuration
+├── models/            # SQLAlchemy models
+├── schemas/           # Pydantic schemas
+├── services/          # Business logic
+└── tests/             # Test files
 ```
 
 ## Docker Commands
@@ -155,20 +165,24 @@ docker-compose down
 docker-compose down -v
 ```
 
-### Production Build
-```bash
-# Build production image
-docker build -t fastapi-app .
+## API Documentation
 
-# Run production container
-docker run -p 8000:8000 \
-  -e POSTGRES_SERVER=your-db-host \
-  -e POSTGRES_USER=your-db-user \
-  -e POSTGRES_PASSWORD=your-db-password \
-  -e POSTGRES_DB=your-db-name \
-  -e SECRET_KEY=your-production-secret \
-  fastapi-app
-```
+Once the application is running, you can access the API documentation at:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## LinkedIn Integration
+
+The project provides endpoints for:
+1. LinkedIn OAuth authentication
+2. Posting content to LinkedIn
+3. Managing LinkedIn tokens and user sessions
+
+To use the LinkedIn integration:
+1. Set up a LinkedIn Developer Application at https://www.linkedin.com/developers/
+2. Configure the OAuth 2.0 settings in your LinkedIn App
+3. Update the `.env` file with your LinkedIn credentials
+4. Use the `/api/v1/linkedin/auth` endpoint to start the OAuth flow
 
 ## Testing
 
@@ -179,4 +193,4 @@ pytest
 
 # Docker testing
 docker-compose exec web pytest
-``` 
+```

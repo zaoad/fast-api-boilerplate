@@ -68,13 +68,13 @@ def get_linkedin_me(db: Session, user_id: int):
     if not db_token:
         raise HTTPException(status_code=404, detail="LinkedIn token not found")
 
-    url = settings.LINKEDIN_USER_INFO_URL
+    url = settings.LINKEDIN_REST_URL
     headers = {
         "Authorization": f"Bearer {db_token.access_token}",
     }
 
     response = requests.get(
-        url=url,
+        url=f"{url}/me",
         headers=headers,
     )
 
