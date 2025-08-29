@@ -11,7 +11,8 @@ from app.services.linkedin import (
 )
 from app.core.auth import get_current_user
 from app.schemas.user import User
-from app.schemas.linkedin import LinkedInPostCreate, LinkedInPostUpdate
+from app.schemas.linkedin import LinkedInPostCreate, LinkedInPostUpdate, LinkedInTaskRequest, TaskResponse
+from app.tasks.linkedin import process_linkedin_task
 
 logger = get_logger("app.api.auth")
 
@@ -78,3 +79,22 @@ async def linkedin_post_delete(post_id: str, current_user: User = Depends(get_cu
     Delete a LinkedIn post.
     """
     return await delete_linkedin_post(post_id, current_user.id)
+
+@router.post("/tasks", response_model=TaskResponse)
+async def create_linkedin_task(task_request: LinkedInTaskRequest):
+    """
+    Create a new LinkedIn task that will be processed in the background
+    Returns a task ID that can be used to check the task status
+    """
+    try:
+        task = process_linkedin_task.delay(task_request.model_dump())
+        
+        return TaskResponse(
+            task_id=task.id,
+            message="Task created successfully"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create task: {str(e)}"
+        )

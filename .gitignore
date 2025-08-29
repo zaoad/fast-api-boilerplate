@@ -65,3 +65,8 @@ alembic/versions/__pycache__/
 # Misc
 *.tmp
 *.temp
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+celery.pid

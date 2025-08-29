@@ -45,6 +45,50 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes
 
+  celery_worker:
+    build: .
+    container_name: fastapi_celery_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+    command: celery -A app.core.celery worker --loglevel=info
+
+  celery_beat:
+    build: .
+    container_name: fastapi_celery_beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+    command: celery -A app.core.celery beat --loglevel=info
+
+  flower:
+    build: .
+    container_name: fastapi_flower
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    depends_on:
+      - celery_worker
+    volumes:
+      - .:/app
+    command: celery -A app.core.celery flower --port=5555
+
 volumes:
   mongodb_data:
 

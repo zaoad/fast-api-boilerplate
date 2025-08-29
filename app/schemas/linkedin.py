@@ -11,3 +11,10 @@ class LinkedInPostUpdate(BaseModel):
     """LinkedIn post update model with all fields optional."""
     text: str = Field(None, description="The text content of the LinkedIn post", min_length=1, max_length=3000)
 
+class LinkedInTaskRequest(BaseModel):
+    task_type: str
+    data: dict
+
+class TaskResponse(BaseModel):
+    task_id: str
+    message: str
