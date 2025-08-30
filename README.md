@@ -1,19 +1,19 @@
 # LinkedInAPI Project
 
-A FastAPI-based LinkedIn API integration project with PostgreSQL, Redis, JWT authentication, and comprehensive LinkedIn posting capabilities.
+A FastAPI-based LinkedIn API integration project with MongoDB, Redis, JWT authentication, and comprehensive LinkedIn posting capabilities.
 
 ## Features
 
-- FastAPI with PostgreSQL database
+- FastAPI with MongoDB database
 - Redis for caching and session management
 - LinkedIn API integration for posting and authentication
 - JWT authentication
-- Alembic for database migrations
+- MongoDB for flexible document storage
 - MVC architecture
 - Testing setup with pytest
 - Environment configuration with .env
 - Docker and Docker Compose support
-- Database management UI with Adminer
+- Database management UI with MongoDB Express
 
 ## Setup
 
@@ -28,10 +28,8 @@ cd fast-api-boilerplate
 2. Create a `.env` file in the root directory with the following variables:
 ```bash
 # Database Configuration
-POSTGRES_SERVER=db
-POSTGRES_USER=fastapi_user
-POSTGRES_PASSWORD=fastapi_password
-POSTGRES_DB=fastapi_db
+MONGODB_URL=mongodb://mongodb:27017/
+MONGODB_DB_NAME=fastapi_db
 
 # Redis Configuration
 REDIS_HOST=redis
@@ -66,7 +64,7 @@ docker-compose up --build
 The application will be available at:
 - FastAPI app: http://localhost:8000
 - API documentation: http://localhost:8000/docs
-- Database admin (Adminer): http://localhost:8080
+- MongoDB Express (Database admin): http://localhost:8081
 
 ### Option 2: Local Development
 
@@ -81,15 +79,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Set up PostgreSQL and Redis locally and create a `.env` file with the configuration shown above, but update these values:
+3. Set up MongoDB and Redis locally and create a `.env` file with the configuration shown above, but update these values:
 ```bash
-POSTGRES_SERVER=localhost
+MONGODB_URL=mongodb://localhost:27017/
 REDIS_HOST=localhost
-```
-
-4. Initialize the database:
-```bash
-alembic upgrade head
 ```
 
 5. Run the application:
@@ -106,7 +99,7 @@ app/
 │       └── endpoints/  # API endpoint modules
 ├── core/              # Core functionality (config, security, logging, redis)
 ├── db/                # Database configuration
-├── models/            # SQLAlchemy models
+├── models/            # MongoDB models
 ├── schemas/           # Pydantic schemas
 ├── services/          # Business logic
 └── tests/             # Test files
@@ -137,11 +130,8 @@ make test
 # Access application shell
 make shell
 
-# Create new migration
-make migration name="your_migration_name"
-
-# Run migrations
-make migrate
+# Initialize MongoDB collections
+make init-db
 
 # Clean up everything
 make clean
